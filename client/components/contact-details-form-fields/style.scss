@@ -11,7 +11,7 @@
 		}
 	}
 
-	@include breakpoint( ">660px" ) {
+	@include breakpoint( '>660px' ) {
 		.hidden-input a,
 		.contact-details-form-fields__field {
 			float: left;
@@ -48,7 +48,7 @@
 		}
 	}
 
-	.hidden-input a {
+	.form__hidden-input a {
 		display: block;
 		font-size: 12px;
 		margin-top: 5px;
