@@ -93,6 +93,8 @@ export class DomainDetailsForm extends PureComponent {
 			'fax',
 		];
 
+		this.googlAppsFieldNames = [ 'firstName', 'lastName', 'postalCode', 'countryCode' ];
+
 		const steps = [ 'mainForm', ...this.getRequiredExtraSteps() ];
 		debug( 'steps:', steps );
 
@@ -103,20 +105,19 @@ export class DomainDetailsForm extends PureComponent {
 			steps,
 			currentStep: first( steps ),
 		};
-
-		this.inputRefs = {};
-		this.inputRefCallbacks = {};
 	}
 
 	componentWillMount() {
 		// eslint-disable-next-line
-		console.log( 'componentWillMount() this.props.contactDetails ', this.props.contactDetails );
-
+		// console.log( 'componentWillMount() this.props.contactDetails ', this.props.contactDetails );
+		//
 		const initialFields = pick( this.props.contactDetails, this.fieldNames );
+		// eslint-disable-next-line
+		console.log( 'componentWillMount() initialFields', initialFields );
 		this.formStateController = formState.Controller( {
-			//fieldNames: this.fieldNames,
-			initialFields,
-			//loadFunction: this.loadFormStateFromRedux,
+			fieldNames: this.fieldNames,
+			//initialFields,
+			loadFunction: this.loadFormStateFromRedux,
 			sanitizerFunction: this.sanitize,
 			validatorFunction: this.validate,
 			onNewState: this.setFormState,
@@ -140,17 +141,16 @@ export class DomainDetailsForm extends PureComponent {
 	componentDidUpdate( prevProps, prevState ) {
 		const previousFormValues = formState.getAllFieldValues( prevState.form );
 		const currentFormValues = formState.getAllFieldValues( this.state.form );
-		// eslint-disable-next-line
-		console.log( 'this.getMainFieldValues()', this.getMainFieldValues() );
+
 		if ( ! isEqual( previousFormValues, currentFormValues ) ) {
 			this.props.updateContactDetailsCache( this.getMainFieldValues() );
 		}
 	}
 
-	// loadFormStateFromRedux = fn => {
-	// 	// only load the properties relevant to the main form fields
-	// 	fn( null, pick( this.props.contactDetails, this.fieldNames ) );
-	// };
+	loadFormStateFromRedux = fn => {
+		// only load the properties relevant to the main form fields
+		fn( null, pick( this.props.contactDetails, this.fieldNames ) );
+	};
 
 	validate = ( fieldValues, onComplete ) => {
 		if ( this.needsOnlyGoogleAppsDetails() ) {
@@ -221,44 +221,14 @@ export class DomainDetailsForm extends PureComponent {
 		throw error;
 	};
 
-	handleChangeEvent = event => {
-		// Resets the state field every time the user selects a different country
-		if ( event.target.name === 'country-code' ) {
-			this.formStateController.handleFieldChange( {
-				name: 'state',
-				value: '',
-				hideError: true,
-			} );
-
-			if ( ! formState.getFieldValue( this.state.form, 'phone' ) ) {
-				this.setState( {
-					phoneCountryCode: event.target.value,
-				} );
-			}
-		}
-
-		this.formStateController.handleFieldChange( {
-			name: event.target.name,
-			value: event.target.value,
-		} );
-	};
-
-	handlePhoneChange = ( { value, countryCode } ) => {
-		this.formStateController.handleFieldChange( {
-			name: 'phone',
-			value,
-		} );
-
-		this.setState( {
-			phoneCountryCode: countryCode,
-		} );
-	};
-
 	getMainFieldValues() {
 		const mainFieldValues = formState.getAllFieldValues( this.state.form );
+		const phone = mainFieldValues.phone
+			? toIcannFormat( mainFieldValues.phone, countries[ this.state.phoneCountryCode ] )
+			: null;
 		return {
 			...mainFieldValues,
-			phone: toIcannFormat( mainFieldValues.phone, countries[ this.state.phoneCountryCode ] ),
+			phone,
 		};
 	}
 
@@ -276,25 +246,6 @@ export class DomainDetailsForm extends PureComponent {
 		return cartItems.getDomainRegistrations( this.props.cart ).length;
 	}
 
-	getFieldProps( name ) {
-		const ref = name === 'state' ? { inputRef: this.getInputRefCallback( name ) } : { ref: name };
-		return {
-			name,
-			...ref,
-			additionalClasses: 'checkout-field',
-			value: formState.getFieldValue( this.state.form, name ) || '',
-			isError: formState.isFieldInvalid( this.state.form, name ),
-			disabled: formState.isFieldDisabled( this.state.form, name ),
-			onChange: this.handleChangeEvent,
-			// The keys are mapped to snake_case when going to API and camelCase when the response is parsed and we are using
-			// kebab-case for HTML, so instead of using different variations all over the place, this accepts kebab-case and
-			// converts it to camelCase which is the format stored in the formState.
-			errorMessage: ( formState.getFieldErrorMessages( this.state.form, camelCase( name ) ) || [] )
-				.join( '\n' ),
-			eventFormName: 'Checkout Form',
-		};
-	}
-
 	needsFax() {
 		return (
 			this.props.contactDetails.countryCode === 'NL' && cartItems.hasTld( this.props.cart, 'nl' )
@@ -309,192 +260,44 @@ export class DomainDetailsForm extends PureComponent {
 		return cartItems.getDomainRegistrationsWithoutPrivacy( this.props.cart ).length === 0;
 	}
 
-	shouldDisplayAddressFieldset() {
-		const { contactDetails } = this.props;
-		return !! ( contactDetails || {} ).countryCode;
-	}
-
-	renderSubmitButton() {
-		const continueText = this.hasAnotherStep()
-			? this.props.translate( 'Continue' )
-			: this.props.translate( 'Continue to Checkout' );
-
-		return (
-			<FormButton
-				className="checkout__domain-details-form-submit-button"
-				onClick={ this.handleSubmitButtonClick }
-			>
-				{ continueText }
-			</FormButton>
-		);
-	}
-
-	renderPrivacySection() {
-		return (
-			<PrivacyProtection
-				allDomainsHavePrivacy={ this.allDomainRegistrationsHavePrivacy() }
-				cart={ this.props.cart }
-				countriesList={ countriesList }
-				disabled={ formState.isSubmitButtonDisabled( this.state.form ) }
-				fields={ this.state.form }
-				onCheckboxChange={ this.handleCheckboxChange }
-				onRadioSelect={ this.handleRadioChange }
-				productsList={ this.props.productsList }
-			/>
-		);
-	}
-
-	renderNameFields() {
-		return (
-			<div>
-				<Input
-					autoFocus
-					label={ this.props.translate( 'First Name' ) }
-					{ ...this.getFieldProps( 'first-name' ) }
-				/>
-
-				<Input
-					label={ this.props.translate( 'Last Name' ) }
-					{ ...this.getFieldProps( 'last-name' ) }
-				/>
-			</div>
-		);
-	}
-
-	renderOrganizationField() {
-		return (
-			<HiddenInput
-				label={ this.props.translate( 'Organization' ) }
-				text={ this.props.translate(
-					'Registering this domain for a company? + Add Organization Name',
-					'Registering these domains for a company? + Add Organization Name',
-					{
-						count: this.getNumberOfDomainRegistrations(),
-					}
-				) }
-				{ ...this.getFieldProps( 'organization' ) }
-			/>
-		);
-	}
-
-	renderEmailField() {
-		return <Input label={ this.props.translate( 'Email' ) } { ...this.getFieldProps( 'email' ) } />;
-	}
-
-	renderCountryField() {
-		return (
-			<CountrySelect
-				label={ this.props.translate( 'Country' ) }
-				countriesList={ countriesList }
-				{ ...this.getFieldProps( 'country-code' ) }
-			/>
-		);
-	}
-
-	renderFaxField() {
-		return <Input label={ this.props.translate( 'Fax' ) } { ...this.getFieldProps( 'fax' ) } />;
-	}
-
-	renderPhoneField() {
-		const label = this.props.translate( 'Phone' );
-
-		return (
-			<FormPhoneMediaInput
-				label={ label }
-				countriesList={ countriesList }
-				countryCode={ this.state.phoneCountryCode }
-				onChange={ this.handlePhoneChange }
-				{ ...omit( this.getFieldProps( 'phone' ), 'onChange' ) }
-			/>
-		);
-	}
-
-	renderAddressFields() {
-		return (
-			<div>
-				<Input
-					label={ this.props.translate( 'Address' ) }
-					maxLength={ 40 }
-					{ ...this.getFieldProps( 'address-1' ) }
-				/>
-
-				<HiddenInput
-					label={ this.props.translate( 'Address Line 2' ) }
-					text={ this.props.translate( '+ Add Address Line 2' ) }
-					maxLength={ 40 }
-					{ ...this.getFieldProps( 'address-2' ) }
-				/>
-			</div>
-		);
-	}
-
-	renderCityField() {
-		return <Input label={ this.props.translate( 'City' ) } { ...this.getFieldProps( 'city' ) } />;
-	}
-
-	renderStateField() {
-		const countryCode = formState.getFieldValue( this.state.form, 'countryCode' );
-
-		return (
-			<StateSelect
-				label={ this.props.translate( 'State' ) }
-				countryCode={ countryCode }
-				{ ...this.getFieldProps( 'state' ) }
-			/>
-		);
-	}
-
-	renderPostalCodeField() {
-		return (
-			<Input
-				label={ this.props.translate( 'Postal Code' ) }
-				{ ...this.getFieldProps( 'postal-code' ) }
-			/>
-		);
-	}
-
-	renderCountryDependentAddressFields( needsOnlyGoogleAppsDetails ) {
-		return (
-			<div className="checkout__domain-details-country-dependent-address-fields">
-				{ ! needsOnlyGoogleAppsDetails && this.renderAddressFields() }
-				{ ! needsOnlyGoogleAppsDetails && this.renderCityField() }
-				{ ! needsOnlyGoogleAppsDetails && this.renderStateField() }
-				{ this.renderPostalCodeField() }
-			</div>
-		);
-	}
-
-	renderDetailsForm() {
-		const needsOnlyGoogleAppsDetails = this.needsOnlyGoogleAppsDetails();
-
-		return (
-			<form>
-				{ this.renderNameFields() }
-				{ ! needsOnlyGoogleAppsDetails && this.renderOrganizationField() }
-				{ ! needsOnlyGoogleAppsDetails && this.renderEmailField() }
-				{ ! needsOnlyGoogleAppsDetails && this.renderPhoneField() }
-				{ this.renderCountryField() }
-				{ ! needsOnlyGoogleAppsDetails && this.needsFax() && this.renderFaxField() }
-				{ this.shouldDisplayAddressFieldset() &&
-					this.renderCountryDependentAddressFields( needsOnlyGoogleAppsDetails ) }
-				{ this.renderSubmitButton() }
-			</form>
-		);
-	}
-
-	renderExtraDetailsForm( tld ) {
-		return <ExtraInfoForm tld={ tld }>{ this.renderSubmitButton() }</ExtraInfoForm>;
-	}
-
 	handleRadioChange = enable => {
 		this.setPrivacyProtectionSubscriptions( enable );
 	};
 
-	focusFirstError() {
-		const firstErrorName = kebabCase( head( formState.getInvalidFields( this.state.form ) ).name );
-		const firstErrorRef = this.inputRefs[ firstErrorName ] || this.refs[ firstErrorName ];
-		firstErrorRef.focus();
-	}
+	// new component methods
+	handleFieldChange = ( { name, value, ...fieldProps } ) => {
+		this.formStateController.handleFieldChange( {
+			name,
+			value,
+			...fieldProps,
+		} );
+		// temp
+		if ( fieldProps.phoneCountryCode ) {
+			this.setState( {
+				phoneCountryCode: fieldProps.phoneCountryCode,
+			} );
+		}
+	};
+
+	isFieldDisabled = fieldName => {
+		return formState.isFieldDisabled( this.state.form, fieldName );
+	};
+
+	isFieldInvalid = fieldName => {
+		return formState.isFieldInvalid( this.state.form, fieldName );
+	};
+
+	getFieldValue = fieldName => {
+		return formState.getFieldValue( fieldName ) || '';
+	};
+
+	getFieldErrorMessages = fieldName => {
+		// The keys are mapped to snake_case when going to API and camelCase when the response is parsed and we are using
+		// kebab-case for HTML, so instead of using different variations all over the place, this accepts kebab-case and
+		// converts it to camelCase which is the format stored in the formState.
+		return ( formState.getFieldErrorMessages( this.state.form, camelCase( fieldName ) ) || [] )
+			.join( '\n' );
+	};
 
 	handleSubmitButtonClick = event => {
 		event.preventDefault();
@@ -503,7 +306,7 @@ export class DomainDetailsForm extends PureComponent {
 			this.recordSubmit();
 
 			if ( hasErrors ) {
-				this.focusFirstError();
+				//this.focusFirstError();
 				return;
 			}
 
@@ -548,72 +351,73 @@ export class DomainDetailsForm extends PureComponent {
 		}
 	}
 
-	// We want to cache the functions to avoid triggering unecessary rerenders
-	getInputRefCallback( name ) {
-		if ( ! this.inputRefCallbacks[ name ] ) {
-			this.inputRefCallbacks[ name ] = el => ( this.inputRefs[ name ] = el );
-		}
-
-		return this.inputRefCallbacks[ name ];
+	renderExtraDetailsForm( tld ) {
+		return <ExtraInfoForm tld={ tld }>{ this.renderSubmitButton() }</ExtraInfoForm>;
 	}
 
-	// new component methods
-	handleFieldChange = ( { name, value, hideError, ...fieldProps } ) => {
-		// eslint-disable-next-line
-		console.log( 'handleFieldChange', name, value, hideError, fieldProps );
-		this.formStateController.handleFieldChange( {
-			name,
-			value,
-			hideError,
-		} );
-		// temp
-		if ( fieldProps.phoneCountryCode ) {
-			this.setState( {
-				phoneCountryCode: fieldProps.phoneCountryCode,
-			} );
-		}
-	};
+	renderSubmitButton() {
+		const continueText = this.hasAnotherStep()
+			? this.props.translate( 'Continue' )
+			: this.props.translate( 'Continue to Checkout' );
 
-	isFieldDisabled = fieldName => {
-		return formState.isFieldDisabled( this.state.form, fieldName );
-	};
+		return (
+			<FormButton
+				className="checkout__domain-details-form-submit-button"
+				onClick={ this.handleSubmitButtonClick }
+			>
+				{ continueText }
+			</FormButton>
+		);
+	}
 
-	isFieldInvalid = fieldName => {
-		return formState.isFieldInvalid( this.state.form, fieldName );
-	};
+	renderPrivacySection() {
+		return (
+			<PrivacyProtection
+				allDomainsHavePrivacy={ this.allDomainRegistrationsHavePrivacy() }
+				cart={ this.props.cart }
+				countriesList={ countriesList }
+				disabled={ formState.isSubmitButtonDisabled( this.state.form ) }
+				fields={ this.state.form }
+				onCheckboxChange={ this.handleCheckboxChange }
+				onRadioSelect={ this.handleRadioChange }
+				productsList={ this.props.productsList }
+			/>
+		);
+	}
 
-	getFieldValue = fieldName => {
-		return formState.getFieldValue( this.state.form, fieldName ) || '';
-	};
+	renderDetailsForm() {
+		const needsOnlyGoogleAppsDetails = this.needsOnlyGoogleAppsDetails();
 
-	getFieldErrorMessages = fieldName => {
-		// The keys are mapped to snake_case when going to API and camelCase when the response is parsed and we are using
-		// kebab-case for HTML, so instead of using different variations all over the place, this accepts kebab-case and
-		// converts it to camelCase which is the format stored in the formState.
-		return ( formState.getFieldErrorMessages( this.state.form, camelCase( fieldName ) ) || [] )
-			.join( '\n' );
-	};
+		const fields = pick(
+			this.props.contactDetails,
+			needsOnlyGoogleAppsDetails ? this.googlAppsFieldNames : Object.keys( this.state.form )
+		);
+		const contactDetailsClassName = needsOnlyGoogleAppsDetails ? 'only-google-apps-details' : '';
+
+		return (
+			<form>
+				<ContactDetailsFormFields
+					eventFormName="Checkout Form"
+					className={ contactDetailsClassName }
+					fields={ fields }
+					invalidFields={ formState.getInvalidFields( this.state.form ) }
+					countriesList={ countriesList }
+					onFieldChange={ this.handleFieldChange }
+					isFieldDisabled={ this.isFieldDisabled }
+					isFieldInvalid={ this.isFieldInvalid }
+					getFieldErrorMessages={ this.getFieldErrorMessages }
+				/>
+				{ this.renderSubmitButton() }
+			</form>
+		);
+	}
 
 	renderCurrentForm() {
 		const { currentStep } = this.state;
-		// eslint-disable-next-line
-		console.log(
-			'render() tldsWithAdditionalDetailsForms',
-			tldsWithAdditionalDetailsForms,
-			currentStep
-		);
-		return includes( tldsWithAdditionalDetailsForms, currentStep ) ? (
-			this.renderExtraDetailsForm( this.state.currentStep )
-		) : (
-			// : this.renderDetailsForm();
-			<ContactDetailsFormFields
-				contactDetails={ this.props.contactDetails }
-				countriesList={ countriesList }
-				eventFormName="Checkout Form"
-				isFieldDisabled={ this.isFieldDisabled }
-				onFieldChange={ this.handleFieldChange }
-			/>
-		);
+
+		return includes( tldsWithAdditionalDetailsForms, currentStep )
+			? this.renderExtraDetailsForm( this.state.currentStep )
+			: this.renderDetailsForm();
 	}
 
 	render() {
@@ -621,8 +425,10 @@ export class DomainDetailsForm extends PureComponent {
 			classSet = classNames( {
 				'domain-details': true,
 				selected: true,
-				'only-google-apps-details': needsOnlyGoogleAppsDetails,
 			} );
+
+		// eslint-disable-next-line
+		console.log( 'RENDER ME SEYMOUR' );
 
 		let title;
 		// TODO: gather up tld specific stuff
