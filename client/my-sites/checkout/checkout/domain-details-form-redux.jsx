@@ -79,58 +79,20 @@ export class DomainDetailsForm extends PureComponent {
 	constructor( props, context ) {
 		super( props, context );
 
-		this.fieldNames = [
-			'firstName',
-			'lastName',
-			'organization',
-			'email',
-			'phone',
-			'address1',
-			'address2',
-			'city',
-			'state',
-			'postalCode',
-			'countryCode',
-			'fax',
-		];
 
 		const steps = [ 'mainForm', ...this.getRequiredExtraSteps() ];
 		debug( 'steps:', steps );
 
 		this.state = {
-			form: null,
-			submissionCount: 0,
-			phoneCountryCode: 'US',
 			steps,
 			currentStep: first( steps )
 		};
 
-		this.inputRefs = {};
-		this.inputRefCallbacks = {};
-		this.shouldAutoFocusAddressField = false;
 		this.contactDetailsFormFieldsInstance = null;
 	}
 
 	componentWillMount() {
-		// eslint-disable-next-line
-		console.log( 'componentWillMount() this.props.contactDetails ', this.props.contactDetails );
 
-		const initialFields = pick( this.props.contactDetails, this.fieldNames );
-		this.formStateController = formState.Controller( {
-			//fieldNames: this.fieldNames,
-			initialFields,
-			//loadFunction: this.loadFormStateFromRedux,
-			sanitizerFunction: this.sanitize,
-			validatorFunction: this.validate,
-			onNewState: this.setFormState,
-			onError: this.handleFormControllerError,
-		} );
-
-		// eslint-disable-next-line
-		console.log( 'componentWillMount() this.state ', this.state );
-		this.setState( {
-			form: this.formStateController.getInitialState(),
-		} );
 	}
 
 	componentDidMount() {
@@ -140,13 +102,13 @@ export class DomainDetailsForm extends PureComponent {
 		);
 	}
 
-	componentDidUpdate( prevProps, prevState ) {
-		const previousFormValues = formState.getAllFieldValues( prevState.form );
-		const currentFormValues = formState.getAllFieldValues( this.state.form );
-		if ( ! isEqual( previousFormValues, currentFormValues ) ) {
-			this.props.updateContactDetailsCache( this.getMainFieldValues() );
-		}
-	}
+	// componentDidUpdate( prevProps, prevState ) {
+	// 		const previousFormValues = formState.getAllFieldValues( prevState.form );
+	// 		const currentFormValues = formState.getAllFieldValues( this.state.form );
+	// 	if ( ! isEqual( previousFormValues, currentFormValues ) ) {
+	// 		this.props.updateContactDetailsCache( this.getMainFieldValues() );
+	// 	}
+	// }
 
 	// loadFormStateFromRedux = fn => {
 	// 	// only load the properties relevant to the main form fields
@@ -154,45 +116,28 @@ export class DomainDetailsForm extends PureComponent {
 	// };
 
 	validate = ( fieldValues, onComplete ) => {
+
+		const validationHandler = ( error, data ) => {
+			const messages = ( data && data.messages ) || {};
+			onComplete( error, messages );
+		};
+
 		if ( this.needsOnlyGoogleAppsDetails() ) {
 			wpcom.validateGoogleAppsContactInformation(
 				fieldValues,
-				this.generateValidationHandler( onComplete )
+				validationHandler
 			);
 			return;
 		}
 
-		const allFieldValues = this.getMainFieldValues();
 		const domainNames = map( cartItems.getDomainRegistrations( this.props.cart ), 'meta' );
 		wpcom.validateDomainContactInformation(
-			allFieldValues,
+			fieldValues,
 			domainNames,
-			this.generateValidationHandler( onComplete )
+			validationHandler
 		);
 	};
 
-	sanitize = ( fieldValues, onComplete ) => {
-		const sanitizedFieldValues = Object.assign( {}, fieldValues );
-		this.fieldNames.forEach( fieldName => {
-			if ( typeof fieldValues[ fieldName ] === 'string' ) {
-				// TODO: Deep
-				sanitizedFieldValues[ fieldName ] = deburr( fieldValues[ fieldName ].trim() );
-				if ( fieldName === 'postalCode' ) {
-					sanitizedFieldValues[ fieldName ] = sanitizedFieldValues[ fieldName ].toUpperCase();
-				}
-			}
-		} );
-
-		onComplete( sanitizedFieldValues );
-	};
-
-	setFormState = form => {
-		if ( ! this.needsFax() ) {
-			delete form.fax;
-		}
-
-		this.setState( { form } );
-	};
 
 	hasAnotherStep() {
 		return this.state.currentStep !== last( this.state.steps );
@@ -204,13 +149,6 @@ export class DomainDetailsForm extends PureComponent {
 		this.setState( { currentStep: newStep } );
 	}
 
-	generateValidationHandler( onComplete ) {
-		return ( error, data ) => {
-			const messages = ( data && data.messages ) || {};
-			onComplete( error, messages );
-		};
-	}
-
 	needsOnlyGoogleAppsDetails() {
 		return (
 			cartItems.hasGoogleApps( this.props.cart ) &&
@@ -218,52 +156,6 @@ export class DomainDetailsForm extends PureComponent {
 		);
 	}
 
-	handleFormControllerError = error => {
-		throw error;
-	};
-
-	// handleChangeEvent = () => {
-	// 	if ( event.target.name === 'country-code' ) {
-	// 		// Remove previous country-specific state value
-	// 		this.formStateController.handleFieldChange( {
-	// 			name: 'state',
-	// 			value: '',
-	// 			hideError: true,
-	// 		} );
-	//
-	// 		if ( ! formState.getFieldValue( this.state.form, 'phone' ) ) {
-	// 			this.setState( {
-	// 				phoneCountryCode: event.target.value,
-	// 			} );
-	// 		}
-	//
-	// 		this.focusAddressField();
-	// 	}
-	//
-	// 	this.formStateController.handleFieldChange( {
-	// 		name: event.target.name,
-	// 		value: event.target.value,
-	// 	} );
-	// };
-
-	// handlePhoneChange = ( { value, countryCode } ) => {
-	// 	this.formStateController.handleFieldChange( {
-	// 		name: 'phone',
-	// 		value,
-	// 	} );
-	//
-	// 	this.setState( {
-	// 		phoneCountryCode: countryCode,
-	// 	} );
-	// };
-
-	getMainFieldValues() {
-		const mainFieldValues = formState.getAllFieldValues( this.state.form );
-		return {
-			...mainFieldValues,
-			phone: toIcannFormat( mainFieldValues.phone, countries[ this.state.phoneCountryCode ] ),
-		};
-	}
 
 	// if `domains/cctlds` is `true` in the config,
 	// for every domain that requires additional steps, add it to this.state.steps
@@ -274,26 +166,6 @@ export class DomainDetailsForm extends PureComponent {
 		}
 		return intersection( cartItems.getTlds( this.props.cart ), tldsWithAdditionalDetailsForms );
 	}
-
-	// getFieldProps = ( name, needsChildRef ) => {
-	// 	// if we're referencing a DOM object in a child component we need to add the `inputRef` prop
-	// 	const ref = needsChildRef ? { inputRef: this.getInputRefCallback( name ) } : { ref: name };
-	// 	const { form } = this.state;
-	//
-	// 	return {
-	// 		...ref,
-	// 		additionalClasses: 'checkout-field',
-	// 		value: formState.getFieldValue( form, name ) || '',
-	// 		isError: formState.isFieldInvalid( form, name ),
-	// 		disabled: formState.isFieldDisabled( form, name ),
-	// 		// The keys are mapped to snake_case when going to API and camelCase when the response is parsed and we are using
-	// 		// kebab-case for HTML, so instead of using different variations all over the place, this accepts kebab-case and
-	// 		// converts it to camelCase which is the format stored in the formState.
-	// 		errorMessage: ( formState.getFieldErrorMessages( form, camelCase( name ) ) || [] )
-	// 			.join( '\n' ),
-	// 		eventFormName: 'Checkout Form',
-	// 	};
-	// };
 
 	needsFax() {
 		return (
@@ -342,50 +214,23 @@ export class DomainDetailsForm extends PureComponent {
 
 
 	// new component methods
-	handleContactDetailsChange = ( { name, value, ...fieldProps } ) => {
+	handleContactDetailsChange = ( newContactDetails ) => {
 		// eslint-disable-next-line
-		console.log( 'handleContactDetailsChange', name, value );
-		this.formStateController.handleFieldChange( {
-			name,
-			value,
-			...fieldProps,
-		} );
-		// temp
-		if ( fieldProps.phoneCountryCode ) {
-			this.setState( {
-				phoneCountryCode: fieldProps.phoneCountryCode,
-			} );
-		}
+		console.log( 'handleContactDetailsChange', newContactDetails );
+		this.props.updateContactDetailsCache( newContactDetails );
 	};
 
 	renderDomainContactDetailsFields() {
 		const { contactDetails } = this.props;
-		const countryCode = ( contactDetails || {} ).countryCode;
 		return (
 			<ContactDetailsFormFields
-				countryCode={ countryCode }
+				contactDetails={ contactDetails }
+				needneedsFaxsFax={ this.needsFax() }
 				onFieldChange={ this.handleContactDetailsChange }
-				form={ this.state.form }
+				onSubmit={ () => { console.log('submitto') } }
 				eventFormName="Checkout Form"
-				// eslint-disable-next-line
-				contactDetails={ this.props.contactDetails }
-				onSanitize={ () => { console.log('sanitix') } }
-				onValidate={ () => { console.log('validix') } }
+				onValidate={ this.validate }
 			/> );
-/*{	<div className="checkout__domain-contact-details-fields">
-				{ this.renderOrganizationField() }
-				{ this.renderEmailField() }
-				{ this.renderPhoneField() }
-				{ this.needsFax() && this.renderFaxField() }
-				{ countryCode && (
-					<RegionAddressFieldsets
-						getFieldProps={ this.getFieldProps }
-						countryCode={ countryCode }
-						shouldAutoFocusAddressField={ this.shouldAutoFocusAddressField }
-					/>
-				) }
-				{ this.renderCountryField() }
-			</div>}*/
 	}
 
 	renderDetailsForm() {
@@ -410,45 +255,11 @@ export class DomainDetailsForm extends PureComponent {
 		this.setPrivacyProtectionSubscriptions( enable );
 	};
 
-	focusFirstError() {
-		const firstErrorName = kebabCase( head( formState.getInvalidFields( this.state.form ) ).name );
-		const firstErrorRef = this.inputRefs[ firstErrorName ] || this.refs[ firstErrorName ];
-		firstErrorRef.focus();
-	}
-
-	focusAddressField() {
-		const inputRef = this.inputRefs[ 'address-1' ] || null;
-
-		if ( inputRef ) {
-			inputRef.focus();
-		} else {
-			// The preference is to fire an inputRef callback
-			// when the previous and next countryCodes don't match,
-			// rather than set a flag.
-			// Multiple renders triggered by formState via `this.setFormState`
-			// prevent it.
-			this.shouldAutoFocusAddressField = true;
+	handleSubmitButtonClick = () => {
+		if ( this.hasAnotherStep() ) {
+			return this.switchToNextStep();
 		}
-	}
-
-	handleSubmitButtonClick = event => {
-		event.preventDefault();
-
-		this.formStateController.handleSubmit( hasErrors => {
-			this.recordSubmit();
-
-			if ( hasErrors ) {
-				// eslint-disable-next-line
-				console.log( 'hasErrors', this.contactDetailsFormFieldsInstance );
-				return;
-			}
-
-			if ( this.hasAnotherStep() ) {
-				return this.switchToNextStep();
-			}
-
-			this.finish();
-		} );
+		this.finish();
 	};
 
 	recordSubmit() {
@@ -545,11 +356,6 @@ export class DomainDetailsFormContainer extends PureComponent {
 	}
 }
 
-export default connect(
-	state => {
-		return {
-			contactDetails: getContactDetailsCache( state ),
-		};
-	},
-	{ updateContactDetailsCache }
-)( localize( DomainDetailsFormContainer ) );
+export default connect( state => ( { contactDetails: getContactDetailsCache( state ) } ), {
+	updateContactDetailsCache,
+} )( localize( DomainDetailsFormContainer ) );
