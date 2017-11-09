@@ -45,6 +45,10 @@ import { forDomainRegistrations as countriesListForDomainRegistrations } from 'l
 import formState from 'lib/form-state';
 import analytics from 'lib/analytics';
 import { toIcannFormat } from 'components/phone-input/phone-number';
+import NoticeErrorMessage from 'my-sites/checkout/checkout/notice-error-message';
+import notices from 'notices';
+import support from 'lib/url/support';
+
 const countriesList = countriesListForDomainRegistrations();
 
 class ContactDetailsFormFields extends Component {
@@ -204,13 +208,12 @@ console.log( this.formStateController.getInitialState() );
 	};
 
 	// We want to cache the functions to avoid triggering unnecessary rerenders
-	getRefCallbackProp( name, refAttributeName ) {
+	getInputRefCallback( name ) {
 		if ( ! this.inputRefCallbacks[ name ] ) {
 			this.inputRefCallbacks[ name ] = el => ( this.inputRefs[ name ] = el );
 		}
-		return {
-			[ refAttributeName ]: this.inputRefCallbacks[ name ]
-		};
+
+		return this.inputRefCallbacks[ name ];
 	}
 
 
@@ -234,7 +237,7 @@ console.log( this.formStateController.getInitialState() );
 	}
 
 	focusFirstError() {
-		const firstErrorName = kebabCase( head( formState.getInvalidFields( this.state.form ) ).name );
+		const firstErrorName =  kebabCase( head( formState.getInvalidFields( this.state.form ) ).name );
 		const firstErrorRef = this.inputRefs[ firstErrorName ] || this.refs[ firstErrorName ];
 
 		try {
@@ -292,7 +295,7 @@ console.log( this.formStateController.getInitialState() );
 		const { name, value } = event.target;
 		const { onFieldChange, contactDetails } = this.props;
 
-		if ( name === 'countryCode' ) {
+		if ( name === 'country-code' ) {
 
 			this.formStateController.handleFieldChange( {
 				name: 'state',
@@ -335,7 +338,7 @@ console.log( this.formStateController.getInitialState() );
 
 	getFieldProps = ( name, needsChildRef = false ) => {
 		// if we're referencing a DOM object in a child component we need to add the `inputRef` prop
-		const ref = this.getRefCallbackProp( name, needsChildRef ? 'inputRef' : 'ref' );
+		const ref = needsChildRef ? { inputRef: this.getInputRefCallback( name ) } : { ref: name };
 		const { eventFormName } = this.props;
 		const { form } = this.state;
 
@@ -354,7 +357,7 @@ console.log( this.formStateController.getInitialState() );
 		}
 	};
 
-	createField = ( name, componentClass, additionalProps ) => {
+	createField = ( name, componentClass, additionalProps, needsChildRef ) => {
 		// const { contactDetails,  eventFormName } = this.props;
 		// const { form } = this.state;
 
@@ -364,7 +367,7 @@ console.log( this.formStateController.getInitialState() );
 					componentClass,
 					Object.assign(
 						{},
-						{ ...this.getFieldProps( name ) },
+						{ ...this.getFieldProps( name, needsChildRef ) },
 						{ ...additionalProps }
 					)
 				) }
@@ -372,26 +375,26 @@ console.log( this.formStateController.getInitialState() );
 		);
 	};
 
-	shouldDisplayAddressFieldset() {
+	getCountryCode() {
 		const { form } = this.state;
-		return !! get( form, 'countryCode.value', '' );
+		return get( form, 'countryCode.value', '' );
 	}
 
 	render() {
-		const { translate, className, contactDetails, needsFax, onCancel } = this.props;
-		const countryCode = ( contactDetails || {} ).countryCode;
+		const { translate, className, needsFax, onCancel } = this.props;
+		const countryCode = this.getCountryCode();
 
 		const { phoneCountryCode } = this.state;
 		// eslint-disable-next-line
 		console.log( 'RENDER ME SEYMOUR CONTACT', countryCode );
 		return (
 			<FormFieldset className={ `contact-details-form-fields ${ className }` }>
-				{ this.createField( 'firstName', Input, {
+				{ this.createField( 'first-name', Input, {
 					autoFocus: true,
 					label: translate( 'First Name' ),
 				} ) }
 
-				{ this.createField( 'lastName', Input, {
+				{ this.createField( 'last-name', Input, {
 					label: translate( 'Last Name' ),
 				} ) }
 
@@ -414,15 +417,21 @@ console.log( this.formStateController.getInitialState() );
 					countriesList,
 					countryCode: phoneCountryCode,
 				} ) }
-				{ this.shouldDisplayAddressFieldset() && (
+
+				{ this.createField( 'country-code', CountrySelect, {
+					label: translate( 'Country' ),
+					countriesList,
+				}, true ) }
+
+				{ countryCode && (
 					<div className="contact-details-form-fields__address-fields">
-						{ this.createField( 'address1', Input, {
+						{ this.createField( 'address-1', Input, {
 							maxLength: 40,
 							label: translate( 'Address' ),
 							//ref: this.shouldAutoFocusAddressField ? this.fieldRefFocusCallback : noop,
 						} ) }
 
-						{ this.createField( 'address2', HiddenInput, {
+						{ this.createField( 'address-2', HiddenInput, {
 							maxLength: 40,
 							label: translate( 'Address Line 2' ),
 							text: translate( '+ Add Address Line 2' ),
@@ -435,9 +444,9 @@ console.log( this.formStateController.getInitialState() );
 						{ this.createField( 'state', StateSelect, {
 							label: translate( 'State' ),
 							countryCode,
-						} ) }
+						}, true  ) }
 
-						{ this.createField( 'postalCode', Input, {
+						{ this.createField( 'postal-code', Input, {
 							label: translate( 'Postal Code' ),
 						} ) }
 					</div>
@@ -449,11 +458,6 @@ console.log( this.formStateController.getInitialState() );
 						shouldAutoFocusAddressField={ this.shouldAutoFocusAddressField }
 					/>
 				) }*/}
-
-				{ this.createField( 'countryCode', CountrySelect, {
-					label: translate( 'Country' ),
-					countriesList,
-				} ) }
 
 				{ this.props.children }
 
