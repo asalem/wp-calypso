@@ -156,10 +156,11 @@ class RegistrantExtraInfoFrForm extends React.PureComponent {
 					? this.props.children
 					: map(
 							castArray( this.props.children ),
-							child =>
+							( child, index ) =>
 								child.props.className.match( /submit-button/ )
 									? React.cloneElement( child, {
 											disabled: true,
+											key: index,
 										} )
 									: child
 						) }

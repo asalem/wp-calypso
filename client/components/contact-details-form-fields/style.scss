@@ -12,10 +12,19 @@
 	}
 
 	@include breakpoint( '>660px' ) {
-		.hidden-input a,
-		.contact-details-form-fields__field {
+		.contact-details-form-fields__container {
+			position: relative;
 			float: left;
 			width: 100%;
+		}
+
+		.hidden-input a,
+		.contact-details-form-fields__field {
+			//float: left;
+			width: 100%;
+		}
+		.contact-details-form-fields__field.last-name {
+			margin-top: 0;
 		}
 
 		.contact-details-form-fields__container.last-name,
@@ -31,21 +40,65 @@
 			width: calc( 50% - 7px );
 		}
 
-		.contact-details-form-fields__container.city,
-		.contact-details-form-fields__container.postal-code,
-		.contact-details-form-fields__container.state {
+		.contact-details-form-fields__field.city,
+		.contact-details-form-fields__field.postal-code,
+		.contact-details-form-fields__field.state {
 			width: calc( 33% - 8px );
+			float: left;
 		}
-
-		.contact-details-form-fields__container.state {
+		.contact-details-form-fields__field.postal-code,
+		.contact-details-form-fields__field.state {
 			margin-left: 14px;
 		}
 
-		&.only-google-apps-details {
-			.contact-details-form-fields__container.country-code {
-				width: 66%;
+		.domain-management-form-footer {
+			justify-content: flex-end;
+		}
+
+		.g-apps-fieldset {
+
+			.country {
+				margin-top: 15px;
+				width: calc( 66% - 8px  );
+				float: left;
+			}
+			.postal-code {
+				margin-top: 15px;
+				width: 33%;
+				float: right;
+				margin-left: 0;
 			}
 		}
+
+		.eu-address-fieldset {
+			.postal-code {
+				float: left;
+				width: calc( 33% - 7px );
+				margin-left: 0;
+			}
+
+			.city {
+				float: right;
+				width: calc( 66% );
+			}
+		}
+
+		.uk-address-fieldset {
+			.postal-code {
+				width: calc( 33% - 7px );
+				float: right;
+				margin-left: 0;
+			}
+
+			.city {
+				width: calc( 66% );
+			}
+		}
+	}
+
+	.domain-management-form-footer {
+		padding-right: 0;
+		width: 100%;
 	}
 
 	.form__hidden-input a {
@@ -54,20 +107,29 @@
 		margin-top: 5px;
 	}
 
+	select {
+		font-size: 15px;
+		width: 100%;
+	}
+
 }
 
-.contact-details-form-fields__container {
-	position: relative;
-	float: left;
-	width: 100%;
-	margin-top: 0;
+.contact-details-form-fields__contact-details {
+	clear: both;
+	overflow: hidden;
 }
-.contact-details-form-fields__container > div {
+
+.contact-details-form-fields__container.country-code {
+	float: none;
+	overflow: hidden;
+}
+
+.contact-details-form-fields__extra-fields,
+.contact-details-form-fields__field {
 	margin-top: 15px;
 }
 
-.contact-details-form-fields__container.first-name > div,
-.contact-details-form-fields__container.last-name > div {
+.contact-details-form-fields__field.first-name {
 	margin-top: 0;
 }
 
