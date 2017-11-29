@@ -58,11 +58,11 @@ export class ContactDetailsFormFields extends Component {
 			postalCode: PropTypes.string,
 			countryCode: PropTypes.string,
 			fax: PropTypes.string,
-		} ),
+		} ).isRequired,
 		needsFax: PropTypes.bool,
 		getIsFieldDisabled: PropTypes.func,
-		onFieldChange: PropTypes.func,
-		onSubmit: PropTypes.func,
+		onContactDetailsChange: PropTypes.func,
+		onSubmit: PropTypes.func.isRequired,
 		onValidate: PropTypes.func,
 		onSanitize: PropTypes.func,
 		labelTexts: PropTypes.object,
@@ -74,7 +74,7 @@ export class ContactDetailsFormFields extends Component {
 	};
 
 	static defaultProps = {
-		eventFormName: 'Contact details',
+		eventFormName: 'Domain contact details form',
 		contactDetails: {
 			firstName: '',
 			lastName: '',
@@ -91,9 +91,8 @@ export class ContactDetailsFormFields extends Component {
 		},
 		needsFax: false,
 		getIsFieldDisabled: noop,
-		onFieldChange: noop,
-		onSubmit: noop,
-		onValidate: noop,
+		onContactDetailsChange: noop,
+		onValidate: null,
 		onSanitize: null,
 		labelTexts: {},
 		onCancel: null,
@@ -167,8 +166,11 @@ export class ContactDetailsFormFields extends Component {
 	}
 
 	setFormState = form => {
+		if ( ! this.props.needsFax ) {
+			delete form.fax;
+		}
 		this.setState( { form }, () => {
-			this.props.onFieldChange( this.getMainFieldValues() );
+			this.props.onContactDetailsChange( this.getMainFieldValues() );
 		} );
 	};
 
@@ -198,7 +200,8 @@ export class ContactDetailsFormFields extends Component {
 	};
 
 	validate = ( fieldValues, onComplete ) => {
-		this.props.onValidate( this.getMainFieldValues(), onComplete );
+		const { onValidate } = this.props;
+		onValidate && onValidate( this.getMainFieldValues(), onComplete );
 	};
 
 	getRefCallback( name ) {
@@ -376,17 +379,17 @@ export class ContactDetailsFormFields extends Component {
 					label: translate( 'Email' ),
 				} ) }
 
-				{ needsFax &&
-					this.createField( 'fax', Input, {
-						label: translate( 'Fax' ),
-					} ) }
-
 				{ this.createField( 'phone', FormPhoneMediaInput, {
 					label: translate( 'Phone' ),
 					onChange: this.handlePhoneChange,
 					countriesList,
 					countryCode: phoneCountryCode,
 				} ) }
+
+				{ needsFax &&
+					this.createField( 'fax', Input, {
+						label: translate( 'Fax' ),
+					} ) }
 
 				{ this.createField(
 					'country-code',
@@ -439,10 +442,15 @@ export class ContactDetailsFormFields extends Component {
 						disabled={ ! countryCode || disableSubmitButton }
 						onClick={ this.handleSubmitButtonClick }
 					>
-						{ labelTexts.submitText || translate( 'Submit' ) }
+						{ labelTexts.submitButton || translate( 'Submit' ) }
 					</FormButton>
 					{ onCancel && (
-						<FormButton type="button" isPrimary={ false } disabled={ false } onClick={ onCancel }>
+						<FormButton
+							className="contact-details-form-fields__cancel-button"
+							type="button"
+							isPrimary={ false }
+							onClick={ onCancel }
+						>
 							{ translate( 'Cancel' ) }
 						</FormButton>
 					) }

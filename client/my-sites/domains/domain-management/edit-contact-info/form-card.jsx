@@ -26,7 +26,7 @@ import { registrar as registrarNames } from 'lib/domains/constants';
 import DesignatedAgentNotice from 'my-sites/domains/domain-management/components/designated-agent-notice';
 import Dialog from 'components/dialog';
 import { getCurrentUser } from 'state/current-user/selectors';
-import ContactDetailsFormFields from 'components/contact-details-form-fields';
+import ContactDetailsFormFields from 'components/domains/contact-details-form-fields';
 
 const wpcom = wp.undocumented();
 
@@ -210,10 +210,13 @@ class EditContactInfoFormCard extends React.Component {
 	}
 
 	handleContactDetailsChange = newContactDetailsValues => {
-		const { email } = newContactDetailsValues;
-		if ( email && get( this.props, 'contactInformation.email' ) !== email ) {
+		const { email: updatedEmailAddress } = newContactDetailsValues;
+		if (
+			updatedEmailAddress &&
+			get( this.props, 'contactInformation.email' ) !== updatedEmailAddress
+		) {
 			this.setState( {
-				email,
+				updatedEmailAddress,
 			} );
 		}
 	};
@@ -352,7 +355,7 @@ class EditContactInfoFormCard extends React.Component {
 						contactDetails={ this.contactFormFieldValues }
 						needsFax={ this.needsFax() }
 						getIsFieldDisabled={ this.getIsFieldDisabled }
-						onFieldChange={ this.handleContactDetailsChange }
+						onContactDetailsChange={ this.handleContactDetailsChange }
 						onSubmit={ this.handleSubmitButtonClick }
 						onValidate={ this.validate }
 						labelTexts={ { submitButton: translate( 'Save Contact Info' ) } }

@@ -41,7 +41,7 @@ import ExtraInfoForm, {
 	tldsWithAdditionalDetailsForms,
 } from 'components/domains/registrant-extra-info';
 import config from 'config';
-import ContactDetailsFormFields from 'components/contact-details-form-fields';
+import ContactDetailsFormFields from 'components/domains/contact-details-form-fields';
 
 const debug = debugFactory( 'calypso:my-sites:upgrades:checkout:domain-details' );
 const wpcom = wp.undocumented();
@@ -181,9 +181,7 @@ export class DomainDetailsForm extends PureComponent {
 	renderDomainContactDetailsFields() {
 		const { contactDetails, translate } = this.props;
 		const labelTexts = {
-			submitButton: this.hasAnotherStep()
-				? translate( 'Continue' )
-				: translate( 'Continue to Checkout' ),
+			submitButton: translate( 'Continue' ),
 			organization: translate(
 				'Registering this domain for a company? + Add Organization Name',
 				'Registering these domains for a company? + Add Organization Name',
@@ -197,7 +195,7 @@ export class DomainDetailsForm extends PureComponent {
 				contactDetails={ contactDetails }
 				needsFax={ this.needsFax() }
 				needsOnlyGoogleAppsDetails={ this.needsOnlyGoogleAppsDetails() }
-				onFieldChange={ this.handleContactDetailsChange }
+				onContactDetailsChange={ this.handleContactDetailsChange }
 				onSubmit={ this.handleSubmitButtonClick }
 				eventFormName="Checkout Form"
 				onValidate={ this.validate }
