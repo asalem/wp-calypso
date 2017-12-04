@@ -21,10 +21,8 @@ export const onboarding = context => {
 	removeSidebar( context );
 
 	renderWithReduxStore(
-		React.createElement( JetpackOnboardingMain, {
-			stepName: context.params.stepName,
-		} ),
-		document.getElementById( 'primary' ),
+		<JetpackOnboardingMain stepName={ context.params.stepName } />,
+		'primary',
 		context.store
 	);
 };
