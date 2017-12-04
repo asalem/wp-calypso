@@ -7,15 +7,7 @@ import { connect } from 'react-redux';
 import { localize } from 'i18n-calypso';
 import classNames from 'classnames';
 import debugFactory from 'debug';
-import {
-	first,
-	includes,
-	indexOf,
-	intersection,
-	isEqual,
-	last,
-	map,
-} from 'lodash';
+import { first, includes, indexOf, intersection, isEqual, last, map } from 'lodash';
 
 /**
  * Internal dependencies

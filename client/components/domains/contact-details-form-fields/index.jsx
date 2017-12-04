@@ -42,23 +42,30 @@ import support from 'lib/url/support';
 
 const countriesList = countriesListForDomainRegistrations();
 
+const CONTACT_DETAILS_FORM_FIELDS = [
+	'firstName',
+	'lastName',
+	'organization',
+	'email',
+	'phone',
+	'address1',
+	'address2',
+	'city',
+	'state',
+	'postalCode',
+	'countryCode',
+	'fax',
+];
+
 export class ContactDetailsFormFields extends Component {
 	static propTypes = {
 		eventFormName: PropTypes.string,
-		contactDetails: PropTypes.shape( {
-			firstName: PropTypes.string,
-			lastName: PropTypes.string,
-			organization: PropTypes.string,
-			email: PropTypes.string,
-			phone: PropTypes.string,
-			address1: PropTypes.string,
-			address2: PropTypes.string,
-			city: PropTypes.string,
-			state: PropTypes.string,
-			postalCode: PropTypes.string,
-			countryCode: PropTypes.string,
-			fax: PropTypes.string,
-		} ).isRequired,
+		contactDetails: PropTypes.shape(
+			Object.assign(
+				{},
+				...CONTACT_DETAILS_FORM_FIELDS.map( field => ( { [ field ]: PropTypes.string } ) )
+			)
+		).isRequired,
 		needsFax: PropTypes.bool,
 		getIsFieldDisabled: PropTypes.func,
 		onContactDetailsChange: PropTypes.func,
@@ -75,20 +82,10 @@ export class ContactDetailsFormFields extends Component {
 
 	static defaultProps = {
 		eventFormName: 'Domain contact details form',
-		contactDetails: {
-			firstName: '',
-			lastName: '',
-			organization: '',
-			email: '',
-			phone: '',
-			address1: '',
-			address2: '',
-			city: '',
-			state: '',
-			postalCode: '',
-			countryCode: '',
-			fax: '',
-		},
+		contactDetails: Object.assign(
+			{},
+			...CONTACT_DETAILS_FORM_FIELDS.map( field => ( { [ field ]: '' } ) )
+		),
 		needsFax: false,
 		getIsFieldDisabled: noop,
 		onContactDetailsChange: noop,
@@ -103,28 +100,15 @@ export class ContactDetailsFormFields extends Component {
 		translate: identity,
 	};
 
-	constructor() {
-		super();
+	constructor( props ) {
+		super( props );
 
 		this.state = {
 			phoneCountryCode: 'US',
 			form: null,
 			submissionCount: 0,
 		};
-		this.fieldNames = [
-			'firstName',
-			'lastName',
-			'organization',
-			'email',
-			'phone',
-			'address1',
-			'address2',
-			'city',
-			'state',
-			'postalCode',
-			'countryCode',
-			'fax',
-		];
+
 		this.inputRefs = {};
 		this.inputRefCallbacks = {};
 		this.formStateController = null;
@@ -143,7 +127,7 @@ export class ContactDetailsFormFields extends Component {
 
 	componentWillMount() {
 		this.formStateController = formState.Controller( {
-			fieldNames: this.fieldNames,
+			fieldNames: CONTACT_DETAILS_FORM_FIELDS,
 			loadFunction: this.loadFormState,
 			sanitizerFunction: this.sanitize,
 			validatorFunction: this.validate,
@@ -153,8 +137,11 @@ export class ContactDetailsFormFields extends Component {
 		} );
 	}
 
-	loadFormState = fn => {
-		fn( null, pick( this.props.contactDetails, this.fieldNames ) );
+	loadFormState = loadFieldValuesIntoState => {
+		loadFieldValuesIntoState(
+			null,
+			pick( this.props.contactDetails, CONTACT_DETAILS_FORM_FIELDS )
+		);
 	};
 
 	getMainFieldValues() {
@@ -166,9 +153,6 @@ export class ContactDetailsFormFields extends Component {
 	}
 
 	setFormState = form => {
-		if ( ! this.props.needsFax ) {
-			delete form.fax;
-		}
 		this.setState( { form }, () => {
 			this.props.onContactDetailsChange( this.getMainFieldValues() );
 		} );
@@ -181,7 +165,7 @@ export class ContactDetailsFormFields extends Component {
 	sanitize = ( fieldValues, onComplete ) => {
 		const sanitizedFieldValues = Object.assign( {}, fieldValues );
 
-		this.fieldNames.forEach( fieldName => {
+		CONTACT_DETAILS_FORM_FIELDS.forEach( fieldName => {
 			if ( typeof fieldValues[ fieldName ] === 'string' ) {
 				// TODO: Deep
 				sanitizedFieldValues[ fieldName ] = deburr( fieldValues[ fieldName ].trim() );
@@ -214,15 +198,15 @@ export class ContactDetailsFormFields extends Component {
 	recordSubmit() {
 		const { form } = this.state;
 		const errors = formState.getErrorMessages( form );
+		const tracksData = {
+			errors_count: ( errors && errors.length ) || 0,
+			submission_count: this.state.submissionCount + 1,
+		};
 
 		const tracksEventObject = formState.getErrorMessages( form ).reduce( ( result, value, key ) => {
 			result[ `error_${ key }` ] = value;
 			return result;
-		},
-		{
-			errors_count: ( errors && errors.length ) || 0,
-			submission_count: this.state.submissionCount + 1,
-		} );
+		}, tracksData );
 
 		analytics.tracks.recordEvent( 'calypso_contact_information_form_submit', tracksEventObject );
 		this.setState( { submissionCount: this.state.submissionCount + 1 } );

@@ -46,7 +46,7 @@ The form model, consisting of key/value pairs. Keys must be **camelCase**.
     postalCode: '12345',
     countryCode: 'IT',
     fax: '+3398067382',
-}
+},
 
 ```
 
@@ -59,13 +59,13 @@ Passed to child field components for tracking purposes.
 
 ### disableSubmitButton {Bool} (optional)
 
-Disables the submit button and therefore prevents form submission
+Disables the submit button, and therefore prevents form submission
 
 **Default value**: `false`
 
 ### getIsFieldDisabled {Func} (optional)
 
-Executed at render time providing the parent component with an opportunity to disable individual or all the form fields.
+Executed at render time providing the parent component with an opportunity to disable individual/all the form fields.
 
 #### Arguments
 
@@ -85,7 +85,7 @@ Usage:
 
 ### labelTexts {Object} (optional)
 
-An object of strings that override certain label texts. This mainly used for conditional labels and translated texts.
+An object of strings that override certain label texts. This is mainly used for conditional labels and translated texts.
 
 Currently supports only two values: `submitButton` and `organization`.
 
@@ -133,7 +133,7 @@ Usage:
 	};
 ```
 
-### onContactDetailsChange {Func} (required)
+### onSubmit {Func} (required)
 
 Triggered onSubmit and when all fields are valid
 
