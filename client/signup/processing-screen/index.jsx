@@ -19,6 +19,7 @@ import Button from 'components/button';
 import Notice from 'components/notice';
 import analytics from 'lib/analytics';
 import { showOAuth2Layout } from 'state/ui/oauth2-clients/selectors';
+import config from 'config';
 import { abtest } from 'lib/abtest';
 
 export class SignupProcessingScreen extends Component {
@@ -289,12 +290,43 @@ export class SignupProcessingScreen extends Component {
 		/* eslint-enable max-len, wpcalypso/jsx-classname-namespace */
 	}
 
+	showChecklistAfterLogin = () => {
+		this.props.loginHandler( { redirectTo: `/checklist/thank-you/${ this.state.siteSlug }` } );
+	};
+
+	renderActionButton() {
+		const { loginHandler, translate } = this.props;
+		const isChecklistTest =
+			config.isEnabled( 'onboarding-checklist' ) && 'active' === abtest( 'checklistThankYouPage' );
+
+		if ( ! loginHandler ) {
+			return (
+				<Button primary disabled className="email-confirmation__button">
+					{ translate( 'Please wait…' ) }
+				</Button>
+			);
+		}
+
+		return (
+			<Button
+				primary
+				className="email-confirmation__button"
+				onClick={ isChecklistTest ? this.showChecklistAfterLogin : loginHandler }
+			>
+				{ translate( 'Continue' ) }
+			</Button>
+		);
+	}
+
 	render() {
+		const isChecklistTest =
+			config.isEnabled( 'onboarding-checklist' ) && 'active' === abtest( 'checklistThankYouPage' );
 		if (
 			! this.state.hasPaidSubscription &&
 			! this.props.useOAuth2Layout &&
 			this.props.flowSteps.indexOf( 'domains' ) !== -1 &&
-			this.props.flowSteps.indexOf( 'plans' ) !== -1
+			this.props.flowSteps.indexOf( 'plans' ) !== -1 &&
+			! isChecklistTest
 		) {
 			return this.renderUpgradeScreen();
 		}
@@ -317,20 +349,7 @@ export class SignupProcessingScreen extends Component {
 
 					<p className="signup-process-screen__title">{ this.getTitle() }</p>
 
-					{ this.props.loginHandler ? (
-						<Button
-							primary
-							className="email-confirmation__button"
-							onClick={ this.props.loginHandler }
-						>
-							{ this.props.translate( 'Continue' ) }
-						</Button>
-					) : (
-						<Button primary disabled className="email-confirmation__button">
-							{ this.props.translate( 'Please wait…' ) }
-						</Button>
-					) }
-
+					{ this.renderActionButton() }
 					{ this.renderConfirmationNotice() }
 				</div>
 				<div className="signup-processing-screen__loader">

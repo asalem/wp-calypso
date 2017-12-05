@@ -67,6 +67,7 @@ import { canAddGoogleApps } from 'lib/domains';
 import { getDomainNameFromReceiptOrCart } from 'lib/domains/utils';
 import { fetchSitesAndUser } from 'lib/signup/step-actions';
 import { loadTrackingTool } from 'state/analytics/actions';
+import config from 'config';
 
 const Checkout = createReactClass( {
 	displayName: 'Checkout',
@@ -271,8 +272,21 @@ const Checkout = createReactClass( {
 		return flatten( Object.values( purchases ) );
 	},
 
+	isNewSite() {
+		const createdAt = get( this.props.selectedSite, 'options.created_at' );
+
+		if ( ! createdAt ) {
+			return false;
+		}
+
+		// Within 30 mins?
+		return Date.now() - Date.parse( createdAt ) < 30 * 60000;
+	},
+
 	getCheckoutCompleteRedirectPath: function() {
 		let renewalItem;
+		const isChecklistTest =
+			config.isEnabled( 'onboarding-checklist' ) && 'active' === abtest( 'checklistThankYouPage' );
 		const { cart, selectedSiteSlug, transaction: { step: { data: receipt } } } = this.props;
 
 		// The `:receiptId` string is filled in by our callback page after the PayPal checkout
@@ -298,7 +312,11 @@ const Checkout = createReactClass( {
 		}
 
 		if ( ! selectedSiteSlug ) {
-			return '/checkout/thank-you/features';
+			return '/checkout/thank-you/features/';
+		}
+
+		if ( isChecklistTest && this.isNewSite() ) {
+			return `/checklist/thank-you/${ selectedSiteSlug }/${ receiptId }`;
 		}
 
 		if ( abtest( 'gsuiteUpsell' ) === 'show' ) {

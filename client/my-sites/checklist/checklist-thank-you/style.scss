@@ -1,0 +1,28 @@
+/** @format */
+.checklist-thank-you__container {
+	max-width: 720px;
+	margin: 0 auto;
+
+	.checklist {
+		text-align: left;
+		margin-top: 54px;
+	}
+}
+
+.checklist-thank-you__confetti {
+	display: block;
+	width: 360px;
+	margin: 0 auto;
+}
+
+.checklist-thank-you__title {
+	font-size: 36px;
+	font-weight: 500;
+	line-height: 1.1em;
+	margin: 0.5em auto;
+	text-align: center;
+}
+
+.checklist-thank-you__description {
+	text-align: center;
+}
