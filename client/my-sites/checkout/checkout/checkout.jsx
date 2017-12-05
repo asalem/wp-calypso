@@ -315,7 +315,7 @@ const Checkout = createReactClass( {
 			return '/checkout/thank-you/features/';
 		}
 
-		if ( isChecklistTest && this.isNewSite() ) {
+		if ( isChecklistTest && cartItems.hasPlan( cart ) && this.isNewSite() ) {
 			return `/checklist/thank-you/${ selectedSiteSlug }/${ receiptId }`;
 		}
 
