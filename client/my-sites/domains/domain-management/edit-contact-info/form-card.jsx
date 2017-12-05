@@ -46,9 +46,10 @@ class EditContactInfoFormCard extends React.Component {
 			formSubmitting: false,
 			transferLock: true,
 			showNonDaConfirmationDialog: false,
-			updatedEmailAddress: null,
+			hasEmailChanged: false,
 			requiresConfirmation: false,
 			haveContactDetailsChanged: false,
+			newContactDetails: null,
 		};
 
 		this.contactFormFieldValues = omit( props.contactInformation, [
@@ -129,6 +130,7 @@ class EditContactInfoFormCard extends React.Component {
 						} ) }
 					</span>
 				</FormLabel>
+				<DesignatedAgentNotice saveButtonLabel={ translate( 'Save Contact Info' ) } />
 			</div>
 		);
 	}
@@ -153,32 +155,34 @@ class EditContactInfoFormCard extends React.Component {
 	}
 
 	renderDialog() {
-		const { translate } = this.props,
-			strong = <strong />,
-			buttons = [
-				{
-					action: 'cancel',
-					label: this.props.translate( 'Cancel' ),
-				},
-				{
-					action: 'confirm',
-					label: this.props.translate( 'Request Confirmation' ),
-					onClick: this.saveContactInfo,
-					isPrimary: true,
-				},
-			],
-			currentEmail = this.props.contactInformation.email,
-			wpcomEmail = this.props.currentUser.email;
+		const { translate } = this.props;
+		const { hasEmailChanged, newContactDetails = {} } = this.state;
+		const strong = <strong />;
+		const buttons = [
+			{
+				action: 'cancel',
+				label: translate( 'Cancel' ),
+			},
+			{
+				action: 'confirm',
+				label: translate( 'Request Confirmation' ),
+				onClick: this.saveContactInfo,
+				isPrimary: true,
+			},
+		];
+		const currentEmail = this.props.contactInformation.email;
+		const wpcomEmail = this.props.currentUser.email;
 
 		let text;
 
-		if ( this.state.updatedEmailAddress ) {
-			const newEmail = this.state.updatedEmailAddress;
-
+		if ( hasEmailChanged && newContactDetails.email ) {
 			text = translate(
 				'We’ll email you at {{strong}}%(oldEmail)s{{/strong}} and {{strong}}%(newEmail)s{{/strong}} ' +
 					'with a link to confirm the new details. The change won’t go live until we receive confirmation from both emails.',
-				{ args: { oldEmail: currentEmail, newEmail }, components: { strong } }
+				{
+					args: { oldEmail: currentEmail, newEmail: newContactDetails.email },
+					components: { strong },
+				}
 			);
 		} else {
 			text = translate(
@@ -209,16 +213,12 @@ class EditContactInfoFormCard extends React.Component {
 		);
 	}
 
-	handleContactDetailsChange = newContactDetailsValues => {
-		const { email: updatedEmailAddress } = newContactDetailsValues;
-		if (
-			updatedEmailAddress &&
-			get( this.props, 'contactInformation.email' ) !== updatedEmailAddress
-		) {
-			this.setState( {
-				updatedEmailAddress,
-			} );
-		}
+	handleContactDetailsChange = newContactDetails => {
+		const { email } = newContactDetails;
+		this.setState( {
+			newContactDetails,
+			hasEmailChanged: get( this.props, 'contactInformation.email' ) !== email,
+		} );
 	};
 
 	onTransferLockOptOutChange = event => {
@@ -234,9 +234,9 @@ class EditContactInfoFormCard extends React.Component {
 		);
 	};
 
-	saveContactInfo = newContactDetails => {
+	saveContactInfo = () => {
 		const { selectedDomain } = this.props;
-		const { formSubmitting, transferLock } = this.state;
+		const { formSubmitting, transferLock, newContactDetails } = this.state;
 
 		if ( formSubmitting ) {
 			return;
@@ -264,6 +264,7 @@ class EditContactInfoFormCard extends React.Component {
 
 	onWhoisUpdate = ( error, data ) => {
 		this.setState( { formSubmitting: false } );
+
 		if ( data && data.success ) {
 			if ( ! this.state.requiresConfirmation ) {
 				this.props.successNotice(
@@ -275,18 +276,17 @@ class EditContactInfoFormCard extends React.Component {
 				return;
 			}
 
-			const currentEmail = this.props.contactInformation.email,
-				strong = <strong />;
+			const currentEmail = this.props.contactInformation.email;
+			const strong = <strong />;
+			const { hasEmailChanged, newContactDetails = {} } = this.state;
 			let message;
 
-			if ( this.state.updatedEmailAddress ) {
-				const newEmail = this.state.updatedEmailAddress;
-
+			if ( hasEmailChanged && newContactDetails.email ) {
 				message = this.props.translate(
 					'Emails have been sent to {{strong}}%(oldEmail)s{{/strong}} and {{strong}}%(newEmail)s{{/strong}}. ' +
 						"Please ensure they're both confirmed to finish this process.",
 					{
-						args: { oldEmail: currentEmail, newEmail },
+						args: { oldEmail: currentEmail, newEmail: newContactDetails.email },
 						components: { strong },
 					}
 				);
@@ -318,12 +318,13 @@ class EditContactInfoFormCard extends React.Component {
 		this.setState(
 			{
 				requiresConfirmation: this.requiresConfirmation( newContactDetails ),
+				newContactDetails,
 			},
 			() => {
 				if ( this.state.requiresConfirmation ) {
 					this.showNonDaConfirmationDialog();
 				} else {
-					this.saveContactInfo( newContactDetails );
+					this.saveContactInfo();
 				}
 			}
 		);
@@ -363,7 +364,6 @@ class EditContactInfoFormCard extends React.Component {
 						disableSubmitButton={ this.shouldDisableSubmitButton() }
 					>
 						{ canUseDesignatedAgent && this.renderTransferLockOptOut() }
-						{ canUseDesignatedAgent && <DesignatedAgentNotice saveButtonLabel={ saveButtonLabel } /> }
 					</ContactDetailsFormFields>
 				</form>
 				{ this.renderDialog() }

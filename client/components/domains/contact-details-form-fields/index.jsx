@@ -30,7 +30,7 @@ import FormFooter from 'my-sites/domains/domain-management/components/form-foote
 import FormButton from 'components/forms/form-button';
 import FormPhoneMediaInput from 'components/forms/form-phone-media-input';
 import { countries } from 'components/phone-input/data';
-import { forDomainRegistrations as countriesListForDomainRegistrations } from 'lib/countries-list';
+import { forDomainRegistrations as countriesList } from 'lib/countries-list';
 import formState from 'lib/form-state';
 import analytics from 'lib/analytics';
 import { toIcannFormat } from 'components/phone-input/phone-number';
@@ -39,8 +39,6 @@ import GAppsFieldset from './custom-form-fieldsets/g-apps-fieldset';
 import RegionAddressFieldsets from './custom-form-fieldsets/region-address-fieldsets';
 import notices from 'notices';
 import support from 'lib/url/support';
-
-const countriesList = countriesListForDomainRegistrations();
 
 const CONTACT_DETAILS_FORM_FIELDS = [
 	'firstName',
